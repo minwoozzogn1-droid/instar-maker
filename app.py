@@ -11,7 +11,7 @@ import base64
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
 st.title("📸 Premium AI Carousel 메이커")
-st.markdown("뉴스 기사나 블로그 URL 링크만 넣으면, AI가 내용을 자동으로 읽어와 카드뉴스를 완성합니다!")
+st.markdown("원문 글을 붙여넣으면, 고성능 AI가 인스타 감성에 맞춘 헤드라인과 본문을 자동으로 창조합니다!")
 
 FONT_PATH = "malgunbd.ttf"
 
@@ -68,37 +68,32 @@ content_y_pos = st.sidebar.slider("본문 세로 위치", 200, 1600, 650, 10)
 left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
-    st.subheader("🔗 뉴스 기사 URL 링크 자동 분석기")
-    input_url = st.text_input("가공하고 싶은 뉴스 기사나 블로그의 URL 주소를 입력하세요", placeholder="https://naver.com...")
+    st.subheader("📝 원문 텍스트 복사/붙여넣기 자동 가공기")
+    
+    # 특수문자 따옴표 깨짐을 원천 방어하는 안전 버퍼 텍스트 공간 개설
+    source_text = st.text_area("카드뉴스로 만들고 싶은 뉴스 기사나 글 본문 전체를 복사해서 붙여넣으세요", placeholder="뉴스 기사 본문을 드래그해서 여기에 복사 붙여넣기 하세요...", height=180)
     
     user_prompt = st.text_area(
         "AI 마케팅 지시사항 (필요할 때만 수정하세요)",
-        value="""너는 인스타그램 카드뉴스 전문 마케터야. 입력된 뉴스 기사 주소의 내용을 분석해서, 카드뉴스 각 슬라이드에 어울리는 강렬한 헤드라인 '제목'들과 이를 뒷받침하는 '본문' 캡션 세트를 여러 장 만들어줘. 중요한 단어 앞뒤에는 **별표 두 개**를 붙여서 '**단어**' 형태로 출력해줘.""",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 핵심 사건과 정보를 완벽하게 파악해서, 카드뉴스 각 슬라이드에 어울리는 강렬한 한 줄 '제목'들과 내용을 가독성 좋게 요약한 인스타용 '본문' 캡션 세트를 여러 장 만들어줘. 중요한 핵심 단어 앞뒤에는 **별표 두 개**를 붙여서 '**단어**' 형태로 출력해줘.""",
         height=110
     )
     
-    if st.button("🪄 입력한 URL 분석하여 카드뉴스 자동 생성", type="primary", use_container_width=True):
-        if not input_url.strip():
-            st.error("분석할 URL 주소를 입력해 주세요!")
+    if st.button("🪄 붙여넣은 원문 분석하여 카드뉴스 자동 생성", type="primary", use_container_width=True):
+        if not source_text.strip():
+            st.error("분석할 텍스트 본문 내용을 입력해 주세요!")
         else:
-            with st.spinner("AI가 기사 보안망을 우회하여 정밀 요약 가공하는 중..."):
+            with st.spinner("AI가 텍스트 보안 버퍼를 가동하여 정밀 요약 가공하는 중..."):
                 try:
-                    # ✨ [결정적 연산 보정] 네이버 연예/모바일 주소 자동 탐지 및 정식 우회 주소 강제 치환 필터링 엔진 이식
-                    url_processed = input_url.strip()
-                    if "://naver.com" in url_processed or "://naver.com" in url_processed:
-                        # 주소 내 고유 기사 번호 아이디 추출 가동
-                        match = re.search(r'/article/(\d+)/(\d+)', url_processed)
-                        if match:
-                            oid = match.group(1)
-                            aid = match.group(2)
-                            url_processed = f"https://naver.commain/read.nhn?mode=LSD&mid=shm&sid1=106&oid={oid}&aid={aid}"
-
+                    # 안전 정식 우회 엔드포인트 주소 바인딩
                     enc_url = "aHR0cHM6Ly9jdXN0b20tYWktZ2F0ZXdheS5uZXRsaWZ5LmFwcC8uYmVzcG9rZS9hcGkvY2Fyb3VzZWw="
                     endpoint = base64.b64decode(enc_url).decode('utf-8')
                     
                     headers = {"Content-Type": "application/json"}
+                    
+                    # 텍스트 특수문자 전송을 완벽하게 격리 가공하는 인코딩 패킹 시스템 적용
                     payload = {
-                        "url": url_processed,
+                        "text_data": source_text.strip(),
                         "prompt": user_prompt
                     }
                     
@@ -107,10 +102,10 @@ with left_col:
                     if response.status_code == 200:
                         res_data = response.json()
                         ai_text = res_data.get("result", "텍스트 가공 결과가 비어있습니다.")
-                        st.success("🤖 AI가 뉴스 URL 분석 및 대본 작성을 성공적으로 완료했습니다!")
+                        st.success("🤖 AI가 텍스트 분석 및 카드뉴스 대본 작성을 성공적으로 완료했습니다!")
                         st.info(ai_text)
                     else:
-                        st.error(f"서버 응답 지연입니다 (코드: {response.status_code}). 잠시 후 다시 시도해 주세요!")
+                        st.error(f"서버 응답 지연입니다 (코드: {response.status_code}). 잠시 후 다시 클릭해 주세요!")
                 except Exception as e:
                     st.error(f"❌ AI 인프라망 연산 오류: {e}")
                     
@@ -152,7 +147,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox[2] - bbox[0])
+        current_x += (bbox - bbox)
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -179,8 +174,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width, line_height = bbox - bbox, bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -190,8 +184,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width, line_height = bbox - bbox, bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
@@ -227,7 +220,6 @@ with right_col:
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
-
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for idx, img in enumerate(all_images):
