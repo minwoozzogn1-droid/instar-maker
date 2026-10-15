@@ -4,8 +4,7 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
-import requests
-import json
+import google.generativeai as genai  # 구글 공식 최신 지능형 라이브러리 복귀
 
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
@@ -30,8 +29,8 @@ ASPECT_RATIOS = {
 
 if "slides" not in st.session_state:
     st.session_state.slides = [
-        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!", "file": None},
-        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요.", "file": None}
+        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
+        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
     ]
 if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
@@ -81,37 +80,25 @@ with left_col:
         elif not source_text.strip():
             st.error("분석할 원문 텍스트 내용을 입력해주세요!")
         else:
-            with st.spinner("구글 정품 AI가 원고를 마케팅 텍스트로 정밀 창조하는 중..."):
+            with st.spinner("구글 정품 AI가 공식 보안망을 통과하여 대본을 빌드하는 중..."):
                 try:
-                    # ✨ [결정적 연산 보정] 입력창 텍스트에 포함된 모든 공백, 엔터, 보이지 않는 노이즈 문자를 깨끗이 세탁
-                    # 정규식을 이용해 순수한 영문, 숫자, 특수기호만 남기고 완벽하게 정제
-                    clean_key = re.sub(r'[^a-zA-Z0-9_\-]', '', gemini_key.strip())
+                    # ✨ [보안 완전 종결 패치] 구글 정식 승인 통신용 공식 SDK 모듈 가동
+                    genai.configure(api_key=gemini_key.strip())
                     
-                    # 주소창 연산식에 더 이상 변수가 개입하지 못하도록 독립 가방에 실어 보냄으로써 외계어 주소 오염을 영구 차단
-                    api_url = "https://googleapis.com"
-                    params = {"key": clean_key}
-                    headers = {"Content-Type": "application/json"}
+                    # 2026 표준 상용화 엔진인 'gemini-1.5-flash' 모델 정석 선언
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    payload = {
-                        "contents": [{"parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}"}]}]
-                    }
+                    # 수동 주소가 아닌 구글 규격 캡슐화 데이터 패킷 전송
+                    response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}")
                     
-                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
-                    
-                    try:
-                        response_json = response.json()
-                        if response.status_code == 200:
-                            ai_text = response_json["candidates"]["content"]["parts"]["text"]
-                            st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 드래그해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
-                            st.info(ai_text)
-                        else:
-                            error_info = response_json.get("error", {})
-                            st.error(f"❌ 구글 응답 에러 ({response.status_code}): {error_info.get('message', '원인 불명의 오류')}")
-                    except Exception as parse_e:
-                        st.error(f"❌ 데이터 내부 변환 오류: 구글 서버 응답 처리 실패 (원문: {response.text[:150]})")
+                    if response.text:
+                        st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 복사해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
+                        st.info(response.text)
+                    else:
+                        st.error("구글 서버 응답이 올바르지 않습니다. 잠시 후 다시 한 번 시도해주세요.")
                         
                 except Exception as e:
-                    st.error(f"❌ AI 시스템 연산 내부 오류: {e}")
+                    st.error(f"❌ 구글 AI 통신망 연산 오류: {e}\n\n사이드바 상단에 구글 API Key가 올바르게 들어갔는지 최종 상태를 한 번 더 체크해주세요.")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -151,7 +138,8 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox - bbox)
+        # 🌟 [오류 해결 1] 선그리기 이동 수식 정석 규격(bbox[2] - bbox[0])으로 철저하게 교정 완결!
+        current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -178,8 +166,9 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox - bbox
-        line_height = bbox - bbox
+        # 🌟 [오류 해결 2] 회원님을 괴롭히던 미리보기 박살 원인 수식을 대괄호 인덱싱 빼기(bbox[2] - bbox[0])로 전면 수리!
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -189,8 +178,9 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox - bbox
-        line_height = bbox - bbox
+        # 🌟 [오류 해결 3] 회원님을 괴롭히던 미리보기 박살 원인 수식을 대괄호 인덱싱 빼기(bbox[2] - bbox[0])로 전면 수리!
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
@@ -225,7 +215,6 @@ with right_col:
     
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
-
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
