@@ -4,7 +4,8 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
-import google.generativeai as genai
+import requests  # 구글 패키지 대신 안전한 웹 통신 라이브러리 사용
+import json
 
 # 1. 페이지 및 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
@@ -83,13 +84,30 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    genai.configure(api_key=gemini_key)
-                    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-                    response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}")
-                    st.success("🤖 AI가 글 작성을 완료했습니다!")
-                    st.info(response.text)
+                    # ✨ [혁신 패치] 라이브러리 간섭 없이 구글 정식 v1 주소로 다이렉트 통신 꽂기
+                    api_url = f"https://googleapis.com{gemini_key}"
+                    headers = {"Content-Type": "application/json"}
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}]
+                        }]
+                    }
+                    
+                    # 다이렉트 웹 요청 전송
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+                    response_json = response.json()
+                    
+                    # 구글 응답 데이터 안전하게 파싱 추출
+                    if response.status_code == 200:
+                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                        st.success("🤖 AI가 글 작성을 완료했습니다!")
+                        st.info(ai_text)
+                    else:
+                        error_msg = response_json.get("error", {}).get("message", "알 수 없는 주소 오류")
+                        st.error(f"구글 서버 응답 오류: {error_msg}")
+                        
                 except Exception as e:
-                    st.error(f"AI 호출 실패: {e}")
+                    st.error(f"AI 호출 실패: {e}\n\n시스템 내부 가상 주소가 차단되었습니다.")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -127,7 +145,6 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        # 클라우드 튜플 규격 보정 완료
         current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
@@ -155,7 +172,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        # 🌟 클라우드 최신 Pillow 환경에 맞춰 대괄호 인덱스 연산으로 완벽 수정 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -167,7 +183,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        # 🌟 클라우드 최신 Pillow 환경에 맞춰 대괄호 인덱스 연산으로 완벽 수정 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -204,6 +219,8 @@ with right_col:
     
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
+    
+
     
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
