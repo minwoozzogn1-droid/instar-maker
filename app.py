@@ -30,7 +30,7 @@ ASPECT_RATIOS = {
 if "slides" not in st.session_state:
     st.session_state.slides = [
         {"title": "여기에 인스타 **헤드라인**을 적으세요", "content": "여기에 본문 요약 내용을 적으세요.\n**별표 두개**를 앞뒤로 감싸면 강조색이 적용됩니다!"},
-        {"title": "두 번째 슬라이드 제목", "content": "내용을 채워 넣으시면 실시간 프리뷰에 반영됩니다."}
+        {"title": "", "content": "내용을 채워 넣으시면 실시간 프리뷰에 반영됩니다."}
     ]
 if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
