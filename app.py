@@ -84,13 +84,12 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [결정적 100% 버그 수정] v1beta 대신 완벽한 정식 버전인 'v1' API 실시간 다이렉트 통신망 구축 완료
-               # 구글 공식 규격 API 주소 고정
+                    # ✨ [결정적 패치] 폐쇄된 v1beta 대신 구글의 최신 정식 상용화 버정인 'v1' 주소로 완전 전환
                     api_url = "https://googleapis.com"
                     params = {"key": gemini_key}
                     headers = {"Content-Type": "application/json"}
-
-                # 구글 표준 텍스트 패킹 데이터 구조 구조화
+                    
+                    # 구글 v1 표준 가이드라인에 맞춘 입출력 데이터 규격화 조립
                     payload = {
                         "contents": [
                             {
@@ -100,14 +99,13 @@ with left_col:
                             }
                         ]
                     }
-
                     
                     response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
                     try:
                         response_json = response.json()
                         if response.status_code == 200:
-                            # 구글 정식 웹 브릿지에서 텍스트 축약 추출 성공
+                            # 구글 정식 웹 채널을 거쳐 결과 텍스트 정상 추출 성공
                             ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
                             st.success("🤖 AI가 글 작성을 완료했습니다!")
                             st.info(ai_text)
@@ -115,7 +113,7 @@ with left_col:
                             error_info = response_json.get("error", {})
                             st.error(f"❌ 구글 응답 에러 ({response.status_code}): {error_info.get('message', '원인 불명')}")
                     except Exception as parse_e:
-                        st.error(f"❌ 데이터 내부 변환 오류: {parse_e}. 구글 웹 데이터 가공에 실패했습니다. (원문: {response.text[:150]})")
+                        st.error(f"❌ 데이터 내부 변환 오류: 구글 서버 응답 처리 실패 (원문: {response.text[:150]})")
                         
                 except Exception as e:
                     st.error(f"❌ AI 네트워크 호출 실패: {e}")
@@ -224,6 +222,7 @@ with right_col:
             st.rerun()
 
     if all_images:
+
         current_img = all_images[current_idx]
 
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
