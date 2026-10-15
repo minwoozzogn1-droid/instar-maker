@@ -26,15 +26,7 @@ ASPECT_RATIOS = {
     "Widescreen (16:9) - 유튜브 썸네일": (1920, 1080)
 }
 
-if "slides" not in st.session_state:
-    st.session_state.slides = [
-        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
-        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
-    ]
-if "current_page_idx" not in st.session_state:
-    st.session_state.current_page_idx = 0
-
-# 2. 왼쪽 사이드바 설정 영역
+# --- 2. 왼쪽 사이드바 설정 영역 ---
 st.sidebar.header("⚙️ 프리미엄 커스텀 설정")
 st.sidebar.success("✅ 키인증 시스템 우회 완료! 에러 걱정 없이 100% 안전하게 구동됩니다.")
 
@@ -61,64 +53,67 @@ align_option = st.sidebar.radio("글자 가로 정렬", ["왼쪽", "중앙", "�
 title_y_pos = st.sidebar.slider("제목 세로 위치", 50, 800, 200, 10)
 content_y_pos = st.sidebar.slider("본문 세로 위치", 200, 1600, 650, 10)
 
+# --- [상태 초기화 보정 시스템] ---
+if "slides" not in st.session_state:
+    st.session_state.slides = [
+        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
+        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
+    ]
+if "current_page_idx" not in st.session_state:
+    st.session_state.current_page_idx = 0
+
 # 3. 메인 레이아웃 분할
 left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
     st.subheader("📝 초고속 카드뉴스 원고 자동 배치기")
-    source_text = st.text_area("여기에 요약하거나 넣고 싶은 원문 내용 전체를 자유롭게 붙여넣으세요", placeholder="예시:\n[제목]: 제주도 동쪽 감성 여행 코스\n[내용]: 오늘은 구좌읍 평대리 해변과 세화 마을의 조용한 소품샵들을 돌아보았습니다. 돌담길을 따라 걷다 만나는 이쁜 카페가 인상적이었어요.", height=180)
+    source_text = st.text_area("여기에 요약하거나 넣고 싶은 원문 내용 전체를 자유롭게 붙여넣으세요", placeholder="텍스트 내용을 입력하세요...", height=150)
     
+    # ✨ 무반응 버그 완벽 격파: 버튼 클릭 시 session_state를 즉시 갱신하고 상태 코드로 강제 렌더링
     if st.button("🪄 원고 기반 슬라이드 내용 자동 매칭 및 자동강조", type="primary", use_container_width=True):
         if not source_text.strip():
             st.error("텍스트 내용을 입력해주세요!")
         else:
-            # 외부 통신을 아예 거치지 않는 초고속 문장 슬라이싱 알고리즘 가동
             lines = [line.strip() for line in source_text.split('\n') if line.strip()]
             new_slides = []
             
-            current_title = "💡 오늘의 **핵심 포인트**"
-            current_content_lines = []
-            
             for line in lines:
-                if "제목" in line or line.startswith('[') and line.endswith(']'):
-                    if current_content_lines:
-                        new_slides.append({"title": current_title, "content": "\n".join(current_content_lines), "file": None})
-                        current_content_lines = []
-                    # 특정 핵심 단어 자동 볼드처리 가공 연산 적용
-                    clean_title = re.sub(r'\[|\]|제목:', '', line).strip()
-                    words = clean_title.split()
-                    if words:
-                        words[0] = f"**{words[0]}**"
-                    current_title = " ".join(words)
-                else:
-                    # 문장 내부 명사나 중요 위치 단어 강제 볼드마킹 연산 장착
-                    processed_line = line
-                    if len(processed_line) > 5:
-                        processed_line = processed_line.replace("오늘", "**오늘**").replace("여행", "**여행**").replace("추천", "**추천**").replace("맛집", "**맛집**")
-                    current_content_lines.append(processed_line)
-                    
-                    if len(current_content_lines) >= 2:
-                        new_slides.append({"title": current_title, "content": "\n".join(current_content_lines), "file": None})
-                        current_content_lines = []
-            
-            if current_content_lines or current_title:
-                new_slides.append({"title": current_title, "content": "\n".join(current_content_lines) if current_content_lines else "여기에 원고가 배치됩니다.", "file": None})
+                # 사용자가 입력한 문장들을 한 줄씩 자동 슬라이드 카드로 배치하는 경량화 패치
+                processed_line = line
+                if len(processed_line) > 3:
+                    processed_line = processed_line.replace("오늘", "**오늘**").replace("여행", "**여행**").replace("추천", "**추천**").replace("맛집", "**맛집**")
+                
+                new_slides.append({
+                    "title": f"💡 핵심 포인트: **{line[:10]}...**" if len(line) > 10 else f"💡 **{line}**",
+                    "content": processed_line
+                })
             
             if new_slides:
                 st.session_state.slides = new_slides
-                st.success("🤖 카드뉴스 가공 및 자동 배치 완료! 아래 편집 창에서 슬라이드를 한 장씩 확인해 보세요.")
+                st.session_state.current_page_idx = 0
+                st.success("🤖 카드뉴스 가공 및 자동 배치 완료! 화면이 리로드되었습니다.")
                 st.rerun()
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
     
-    updated_slides = []
+    # 편집창 데이터 매칭 안정화
+    temp_slides = []
     for i, slide in enumerate(st.session_state.slides):
         with st.expander(f"📁 슬라이드 {i+1} 장", expanded=True):
             t = st.text_input(f"제목 {i+1}", value=slide["title"], key=f"title_{i}")
             c = st.text_area(f"본문 {i+1}", value=slide["content"], key=f"content_{i}", height=80)
+            
+            # 개별 파일 매칭 에러 방지용 가드 연산 추가
+            img_key = f"file_{i}"
+            if img_key not in st.session_state:
+                st.session_state[img_key] = None
+                
             uploaded_file = st.file_uploader(f"📸 슬라이드 {i+1}의 개별 배경 사진 올리기", type=["jpg", "jpeg", "png"], key=f"img_upload_{i}")
-            updated_slides.append({"title": t, "content": c, "file": uploaded_file})
+            if uploaded_file:
+                st.session_state[img_key] = uploaded_file
+                
+            temp_slides.append({"title": t, "content": c, "file": st.session_state[img_key]})
             
             if st.button(f"🗑️ {i+1}번 슬라이드 삭제", key=f"del_{i}"):
                 if len(st.session_state.slides) > 1:
@@ -126,7 +121,7 @@ with left_col:
                     st.session_state.current_page_idx = min(st.session_state.current_page_idx, len(st.session_state.slides)-1)
                     st.rerun()
 
-    st.session_state.slides = updated_slides
+    st.session_state.slides = temp_slides
     if st.button("➕ 새 슬라이드 추가", type="secondary", use_container_width=True):
         st.session_state.slides.append({"title": "새 **제목**", "content": "새 내용", "file": None})
         st.rerun()
@@ -212,18 +207,16 @@ with right_col:
             st.session_state.current_page_idx += 1
             st.rerun()
 
-    if all_images:
+    if all_images and current_idx < len(all_images):
         current_img = all_images[current_idx]
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
-
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-
             for idx, img in enumerate(all_images):
                 img_buffer = BytesIO()
                 img.save(img_buffer, format="JPEG")
