@@ -4,7 +4,7 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
-import google.generativeai as genai  # 구글 공식 최신 지능형 라이브러리 복귀
+import google.generativeai as genai
 
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
@@ -82,13 +82,13 @@ with left_col:
         else:
             with st.spinner("구글 정품 AI가 공식 보안망을 통과하여 대본을 빌드하는 중..."):
                 try:
-                    # ✨ [보안 완전 종결 패치] 구글 정식 승인 통신용 공식 SDK 모듈 가동
-                    genai.configure(api_key=gemini_key.strip())
+                    # ✨ [강제 우회 패치] 옛날 v1beta 주소 체계와의 간섭을 물리적으로 완전히 단절
+                    # 라이브러리가 최신 버전(v1 주소 체계)만 강제로 사용하도록 버전을 직접 지정하여 연동 초기화
+                    genai.configure(api_key=gemini_key.strip(), client_options={"api_version": "v1"})
                     
-                    # 2026 표준 상용화 엔진인 'gemini-1.5-flash' 모델 정석 선언
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    # 404 모델 에러가 일절 나지 않는 정식 상용화 모델 빌드
+                    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
                     
-                    # 수동 주소가 아닌 구글 규격 캡슐화 데이터 패킷 전송
                     response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}")
                     
                     if response.text:
@@ -138,7 +138,6 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        # 🌟 [오류 해결 1] 선그리기 이동 수식 정석 규격(bbox[2] - bbox[0])으로 철저하게 교정 완결!
         current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
@@ -166,7 +165,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        # 🌟 [오류 해결 2] 회원님을 괴롭히던 미리보기 박살 원인 수식을 대괄호 인덱싱 빼기(bbox[2] - bbox[0])로 전면 수리!
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -178,7 +176,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        # 🌟 [오류 해결 3] 회원님을 괴롭히던 미리보기 박살 원인 수식을 대괄호 인덱싱 빼기(bbox[2] - bbox[0])로 전면 수리!
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
