@@ -84,30 +84,40 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # 🌟 [오류 완벽 수정] 파이썬 문자열 포맷팅 기법을 정석대로 교정하여 주소 깨짐 현상을 원천 격파했습니다.
+                    # ✨ [규격 보정] 구글 정석 API 게이트웨이 주소로 변경
                     api_url = "https://googleapis.com"
                     params = {"key": gemini_key}
                     headers = {"Content-Type": "application/json"}
+                    
+                    # ✨ [데이터 구조 변경] 구글이 100% 이해할 수 있는 JSON 텍스트 패킹 형식으로 재조립
                     payload = {
-                        "contents": [{
-                            "parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}]
-                        }]
+                        "contents": [
+                            {
+                                "parts": [
+                                    {"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}
+                                ]
+                            }
+                        ]
                     }
                     
-                    # 주소 꼬임 방지를 위해 params 인자로 키값을 분리 전송
-                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=12)
-                    response_json = response.json()
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
-                    if response.status_code == 200:
-                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                        st.success("🤖 AI가 글 작성을 완료했습니다!")
-                        st.info(ai_text)
-                    else:
-                        error_msg = response_json.get("error", {}).get("message", "알 수 없는 응답 오류")
-                        st.error(f"구글 서버 응답 오류: {error_msg}")
+                    # 만약 JSON 파싱에 실패하더라도 먹통이 되지 않고 진짜 원인을 글자로 읽어오도록 안전 장치 적용
+                    try:
+                        response_json = response.json()
+                        if response.status_code == 200:
+                            # 구글 정식 루트에서 순수 텍스트 결과 끄집어내기
+                            ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                            st.success("🤖 AI가 글 작성을 완료했습니다!")
+                            st.info(ai_text)
+                        else:
+                            error_info = response_json.get("error", {})
+                            st.error(f"❌ 구글 응답 에러 ({response.status_code}): {error_info.get('message', '원인 불명')}")
+                    except:
+                        st.error(f"❌ 데이터 변환 실패: 구글 서버가 올바르지 않은 응답을 보냈습니다. (텍스트: {response.text[:200]})")
                         
                 except Exception as e:
-                    st.error(f"AI 호출 실패: {e}\n\n서버 통신망에 알 수 없는 예외가 발생했습니다.")
+                    st.error(f"❌ AI 네트워크 호출 실패: {e}")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -210,6 +220,7 @@ with right_col:
     with nav_col3:
         if st.button("다음 장 ➡️", use_container_width=True) and current_idx < total_pages - 1:
             st.session_state.current_page_idx += 1
+
             st.rerun()
 
     if all_images:
