@@ -4,11 +4,12 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
+import requests
 
-# 1. 페이지 및 고정 설정
+# 1. 페이지 레이아웃 및 폰트 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
 st.title("📸 Premium AI Carousel 메이커")
-st.markdown("텍스트를 붙여넣으면 자동으로 카드뉴스 문장 구조에 맞춰 정렬해주는 무결점 스튜디오입니다!")
+st.markdown("구글 무료 AI(Gemini)를 장착하여, 나만의 프롬프트로 본문과 헤드라인을 자동 생성해보세요!")
 
 FONT_PATH = "malgunbd.ttf"
 
@@ -26,12 +27,20 @@ ASPECT_RATIOS = {
     "Widescreen (16:9) - 유튜브 썸네일": (1920, 1080)
 }
 
-# --- 2. 왼쪽 사이드바 설정 영역 ---
+if "slides" not in st.session_state:
+    st.session_state.slides = [
+        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!", "file": None},
+        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요.", "file": None}
+    ]
+if "current_page_idx" not in st.session_state:
+    st.session_state.current_page_idx = 0
+
+# 2. 왼쪽 사이드바 커스텀 UI
 st.sidebar.header("⚙️ 프리미엄 커스텀 설정")
-st.sidebar.success("✅ 키인증 시스템 우회 완료! 에러 걱정 없이 100% 안전하게 구동됩니다.")
+gemini_key = st.sidebar.text_input("구글 Gemini API Key 입력", type="password", placeholder="AQ...")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("🔤 글자 크기 개별 조절 (1% ~ 100%)")
+st.sidebar.subheader("🔤 글자 크기 비율 조절 (1% ~ 100%)")
 title_percent = st.sidebar.slider("📐 제목 글자 크기 비율", 1, 100, 65, format="%d%%")
 content_percent = st.sidebar.slider("📐 본문 글자 크기 비율", 1, 100, 35, format="%d%%")
 
@@ -53,67 +62,61 @@ align_option = st.sidebar.radio("글자 가로 정렬", ["왼쪽", "중앙", "�
 title_y_pos = st.sidebar.slider("제목 세로 위치", 50, 800, 200, 10)
 content_y_pos = st.sidebar.slider("본문 세로 위치", 200, 1600, 650, 10)
 
-# --- [상태 초기화 보정 시스템] ---
-if "slides" not in st.session_state:
-    st.session_state.slides = [
-        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
-        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
-    ]
-if "current_page_idx" not in st.session_state:
-    st.session_state.current_page_idx = 0
-
-# 3. 메인 레이아웃 분할
+# 3. 메인 레이아웃 화면 구성
 left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
-    st.subheader("📝 초고속 카드뉴스 원고 자동 배치기")
-    source_text = st.text_area("여기에 요약하거나 넣고 싶은 원문 내용 전체를 자유롭게 붙여넣으세요", placeholder="텍스트 내용을 입력하세요...", height=150)
+    st.subheader("🤖 나만의 AI 자동 글짓기 명령어 (프롬프트)")
+    user_prompt = st.text_area(
+        "AI에게 내릴 지시사항을 자유롭게 고치세요",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글을 바탕으로 카드뉴스 첫 장에 어울리는 자극적이고 흥미진진한 한 줄 '제목'을 뽑아주고, 이어서 글의 전체 내용을 요약한 가독성 좋은 인스타용 '본문' 캡션을 만들어줘. 중요한 핵심 키워드나 강조하고 싶은 매력적인 단어는 앞뒤에 **별표 두 개**를 붙여서 '**단어**' 형태로 출력해줘.""",
+        height=130
+    )
+    source_text = st.text_area("여기에 요약·가공할 원문 커뮤니티 글이나 뉴스를 붙여넣으세요", placeholder="텍스트 내용을 입력 후 아래 AI 작성 버튼을 누르세요...", height=120)
     
-    # ✨ 무반응 버그 완벽 격파: 버튼 클릭 시 session_state를 즉시 갱신하고 상태 코드로 강제 렌더링
-    if st.button("🪄 원고 기반 슬라이드 내용 자동 매칭 및 자동강조", type="primary", use_container_width=True):
-        if not source_text.strip():
-            st.error("텍스트 내용을 입력해주세요!")
+    if st.button("💡 구글 AI로 카드뉴스 텍스트 자동 생성", type="secondary", use_container_width=True):
+        if not gemini_key:
+            st.error("왼쪽 메뉴 상단에 구글 Gemini API Key를 먼저 입력해주세요!")
+        elif not source_text.strip():
+            st.error("원문 텍스트 내용을 입력해주세요!")
         else:
-            lines = [line.strip() for line in source_text.split('\n') if line.strip()]
-            new_slides = []
-            
-            for line in lines:
-                # 사용자가 입력한 문장들을 한 줄씩 자동 슬라이드 카드로 배치하는 경량화 패치
-                processed_line = line
-                if len(processed_line) > 3:
-                    processed_line = processed_line.replace("오늘", "**오늘**").replace("여행", "**여행**").replace("추천", "**추천**").replace("맛집", "**맛집**")
-                
-                new_slides.append({
-                    "title": f"💡 핵심 포인트: **{line[:10]}...**" if len(line) > 10 else f"💡 **{line}**",
-                    "content": processed_line
-                })
-            
-            if new_slides:
-                st.session_state.slides = new_slides
-                st.session_state.current_page_idx = 0
-                st.success("🤖 카드뉴스 가공 및 자동 배치 완료! 화면이 리로드되었습니다.")
-                st.rerun()
+            with st.spinner("구글 인공지능이 카드뉴스 글을 지어내는 중..."):
+                try:
+                    # 정식 상용 규격 v1 다이렉트 고속 통신 채널 주소 타겟팅
+                    api_url = "https://googleapis.com"
+                    params = {"key": gemini_key.strip()}
+                    headers = {"Content-Type": "application/json"}
+                    
+                    payload = {
+                        "contents": [{"parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}]}]
+                    }
+                    
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
+                    response_json = response.json()
+                    
+                    if response.status_code == 200:
+                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                        st.success("🤖 AI가 글 작성을 완료했습니다! 내용을 확인하여 슬라이드 창에 알맞게 넣으세요.")
+                        st.info(ai_text)
+                    else:
+                        error_msg = response_json.get("error", {}).get("message", "원인 불명의 오류")
+                        st.error(f"❌ 구글 응답 실패 ({response.status_code}): {error_msg}")
+                except Exception as e:
+                    st.error(f"❌ AI 내부 연산 오류: {e}")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
     
-    # 편집창 데이터 매칭 안정화
     temp_slides = []
     for i, slide in enumerate(st.session_state.slides):
         with st.expander(f"📁 슬라이드 {i+1} 장", expanded=True):
             t = st.text_input(f"제목 {i+1}", value=slide["title"], key=f"title_{i}")
             c = st.text_area(f"본문 {i+1}", value=slide["content"], key=f"content_{i}", height=80)
+            uploaded_file = st.file_uploader(f"📸 슬라이드 {i+1}의 배경 사진 올리기", type=["jpg", "jpeg", "png"], key=f"img_upload_{i}")
             
-            # 개별 파일 매칭 에러 방지용 가드 연산 추가
-            img_key = f"file_{i}"
-            if img_key not in st.session_state:
-                st.session_state[img_key] = None
-                
-            uploaded_file = st.file_uploader(f"📸 슬라이드 {i+1}의 개별 배경 사진 올리기", type=["jpg", "jpeg", "png"], key=f"img_upload_{i}")
-            if uploaded_file:
-                st.session_state[img_key] = uploaded_file
-                
-            temp_slides.append({"title": t, "content": c, "file": st.session_state[img_key]})
+            # 개별 배경사진 유실 방지 가드 처리
+            final_file = uploaded_file if uploaded_file else slide.get("file")
+            temp_slides.append({"title": t, "content": c, "file": final_file})
             
             if st.button(f"🗑️ {i+1}번 슬라이드 삭제", key=f"del_{i}"):
                 if len(st.session_state.slides) > 1:
@@ -126,7 +129,7 @@ with left_col:
         st.session_state.slides.append({"title": "새 **제목**", "content": "새 내용", "file": None})
         st.rerun()
 
-# 4. 이미지 그래픽 처리 함수부
+# 4. 이미지 텍스트 드로우 함수부
 def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
     tokens = re.split(r'(\*\*.*?\*\*)', line)
     current_x = start_x
@@ -167,8 +170,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width, line_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -178,14 +180,13 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width, line_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
     return img
 
-# 5. 오른쪽 미리보기 창 구성
+# 5. 오른쪽 실시간 미리보기 및 슬라이드 제어 창 구성
 with right_col:
     st.subheader("👁️ 실시간 프리뷰")
     preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 60, format="%d%%")
@@ -214,6 +215,8 @@ with right_col:
     
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
+    
+
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
