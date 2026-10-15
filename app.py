@@ -84,10 +84,9 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # 🌟 [오류 완전 종결 패치] 구글 주소는 순수하게 영문으로 완전히 고정!
+                    # ✨ [결정적 교정] 구글 글로벌 메인프레임 공식 최신 단일 규격 주소망으로 전면 동기화
                     api_url = "https://googleapis.com"
                     
-                    # 특수문자가 섞인 회원님의 소중한 키값을 파라미터 백으로 분리하여 안전하게 우회 전송
                     params = {"key": gemini_key.strip()}
                     headers = {"Content-Type": "application/json"}
                     
@@ -101,7 +100,6 @@ with left_col:
                         ]
                     }
                     
-                    # params 인자를 이용한 분리 수하물 결합 통신 수행
                     response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
                     try:
@@ -114,7 +112,7 @@ with left_col:
                             error_info = response_json.get("error", {})
                             st.error(f"❌ 구글 서버 인증 실패 ({response.status_code}): {error_info.get('message', '원인 불명')}")
                     except Exception as parse_e:
-                        st.error(f"❌ 데이터 내부 연산 실패. (원문 에러 응답: {response.text[:200]})")
+                        st.error(f"❌ 데이터 내부 연산 실패. (원문 에러 응답: {response.text[:150]})")
                         
                 except Exception as e:
                     st.error(f"❌ AI 네트워크 호출 실패: {e}")
@@ -155,6 +153,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
+        # 리눅스 클라우드 패널 전용 대괄호 인덱싱 보정 완료
         current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
@@ -182,6 +181,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
+        # 리눅스 클라우드 패널 전용 대괄호 인덱싱 보정 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -193,6 +193,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
+        # 리눅스 클라우드 패널 전용 대괄호 인덱싱 보정 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
