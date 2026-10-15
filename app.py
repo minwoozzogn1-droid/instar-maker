@@ -70,8 +70,7 @@ with left_col:
     st.subheader("🤖 나만의 AI 자동 글짓기 명령어 (프롬프트)")
     user_prompt = st.text_area(
         "AI에게 내릴 지시사항을 자유롭게 고치세요",
-        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 내용을 분석해서, 인스타 유저들의 이목을 사로잡을 수 있는 강렬하고 매력적인 카드뉴스 원고를 최소 4장 분량의 세트로 만들어줘.
-각 슬라이드마다 어울리는 짧고 한 눈에 들어오는 헤드라인 '제목'을 뽑아주고, 이를 설명하는 쉽고 가독성 좋은 '본문' 캡션을 만들어줘. 중요한 단어나 핵심 키워드 앞뒤에는 반드시 **별표 두 개**를 붙여서 '**단어**' 형태로 강조해줘.""",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 내용을 분석해서, 인스타 유저들의 이목을 사로잡을 수 있는 강렬하고 매력적인 카드뉴스 원고를 최소 4장 분량의 세트로 만들어줘. 각 슬라이드마다 어울리는 짧고 한 눈에 들어오는 헤드라인 '제목'을 뽑아주고, 이를 설명하는 쉽고 가독성 좋은 '본문' 캡션을 만들어줘. 중요한 단어 앞뒤에는 **별표 두 개**를 붙여서 '**단어**' 형태로 강조해줘.""",
         height=150
     )
     source_text = st.text_area("카드뉴스 본문으로 가공하고 싶은 뉴스 기사나 원문 글을 여기에 복사 붙여넣기 하세요", placeholder="내용을 입력하세요...", height=180)
@@ -84,24 +83,32 @@ with left_col:
         else:
             with st.spinner("구글 정품 AI가 원고를 마케팅 텍스트로 정밀 창조하는 중..."):
                 try:
-                    # ✨ [대연동 패치] 특수문자 키 충돌을 우회하는 구글 공식 다이렉트 정식 URL 결합 채널 개설
-                    api_url = f"https://googleapis.com{gemini_key.strip()}"
+                    # ✨ [결정적 연산 보정] 입력창 텍스트에 포함된 모든 공백, 엔터, 보이지 않는 노이즈 문자를 깨끗이 세탁
+                    # 정규식을 이용해 순수한 영문, 숫자, 특수기호만 남기고 완벽하게 정제
+                    clean_key = re.sub(r'[^a-zA-Z0-9_\-]', '', gemini_key.strip())
+                    
+                    # 주소창 연산식에 더 이상 변수가 개입하지 못하도록 독립 가방에 실어 보냄으로써 외계어 주소 오염을 영구 차단
+                    api_url = "https://googleapis.com"
+                    params = {"key": clean_key}
                     headers = {"Content-Type": "application/json"}
                     
                     payload = {
                         "contents": [{"parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}"}]}]
                     }
                     
-                    response = requests.post(api_url, headers=headers, json=payload, timeout=20)
-                    response_json = response.json()
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
-                    if response.status_code == 200:
-                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                        st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 드래그해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
-                        st.info(ai_text)
-                    else:
-                        error_msg = response_json.get("error", {}).get("message", "API 키 유효성 오류")
-                        st.error(f"❌ 구글 통신 실패 ({response.status_code}): {error_msg}")
+                    try:
+                        response_json = response.json()
+                        if response.status_code == 200:
+                            ai_text = response_json["candidates"]["content"]["parts"]["text"]
+                            st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 드래그해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
+                            st.info(ai_text)
+                        else:
+                            error_info = response_json.get("error", {})
+                            st.error(f"❌ 구글 응답 에러 ({response.status_code}): {error_info.get('message', '원인 불명의 오류')}")
+                    except Exception as parse_e:
+                        st.error(f"❌ 데이터 내부 변환 오류: 구글 서버 응답 처리 실패 (원문: {response.text[:150]})")
                         
                 except Exception as e:
                     st.error(f"❌ AI 시스템 연산 내부 오류: {e}")
@@ -144,7 +151,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox[2] - bbox[0])
+        current_x += (bbox - bbox)
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -171,8 +178,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -182,8 +189,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
