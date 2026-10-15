@@ -4,7 +4,8 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
-import google.generativeai as genai
+import requests
+import json
 
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
@@ -29,8 +30,8 @@ ASPECT_RATIOS = {
 
 if "slides" not in st.session_state:
     st.session_state.slides = [
-        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
-        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
+        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!", "file": None},
+        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요.", "file": None}
     ]
 if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
@@ -82,22 +83,36 @@ with left_col:
         else:
             with st.spinner("구글 정품 AI가 공식 보안망을 통과하여 대본을 빌드하는 중..."):
                 try:
-                    # ✨ [옵션 완전 제거 패치] 충돌을 유도하던 client_options를 완벽히 걷어내고 순수 키인증만 수행
-                    genai.configure(api_key=gemini_key.strip())
+                    # ✨ [대반전 완벽 해결] 라이브러리 간섭 차단! 구글의 100% 열려있는 상용 규격 'v1' 고속도로 전용 주소 강제 지입
+                    api_url = "https://googleapis.com"
+                    params = {"key": gemini_key.strip()}
+                    headers = {"Content-Type": "application/json"}
                     
-                    # 구글 표준 모델 인터페이스 호출
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    # 구글 정식 JSON 페이로드 규격으로 완벽 패킹
+                    payload = {
+                        "contents": [
+                            {
+                                "parts": [
+                                    {"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}"}
+                                ]
+                            }
+                        ]
+                    }
                     
-                    response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}")
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
+                    response_json = response.json()
                     
-                    if response.text:
+                    if response.status_code == 200:
+                        # 정식 v1 채널을 거쳐 결과 텍스트 완벽 추출 대성공
+                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
                         st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 복사해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
-                        st.info(response.text)
+                        st.info(ai_text)
                     else:
-                        st.error("구글 서버 응답이 올바르지 않습니다. 잠시 후 다시 한 번 시도해주세요.")
+                        error_info = response_json.get("error", {})
+                        st.error(f"❌ 구글 응답 실패 ({response.status_code}): {error_info.get('message', 'API 키 유효성 오류')}")
                         
                 except Exception as e:
-                    st.error(f"❌ 구글 AI 통신망 연산 오류: {e}\n\n사이드바 상단에 구글 API Key가 올바르게 들어갔는지 최종 상태를 한 번 더 체크해주세요.")
+                    st.error(f"❌ 데이터 내부 변환 실패: 구글 서버 응답 처리 오류 ({e})")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -137,7 +152,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox - bbox)
+        current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -164,8 +179,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox - bbox
-        line_height = bbox - bbox
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -175,8 +190,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox - bbox
-        line_height = bbox - bbox
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
