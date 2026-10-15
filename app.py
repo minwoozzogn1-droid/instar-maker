@@ -4,11 +4,13 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
+import requests
+import json
 
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
 st.title("📸 Premium AI Carousel 메이커")
-st.markdown("원문 텍스트를 복사해서 붙여넣으면, 문장 구조에 맞춰 최고의 인스타 카드뉴스로 자동 배치해주는 무결점 스튜디오입니다!")
+st.markdown("구글 무료 AI(Gemini)를 장착하여, 나만의 프롬프트로 본문과 헤드라인을 자동 생성해보세요!")
 
 FONT_PATH = "malgunbd.ttf"
 
@@ -26,18 +28,17 @@ ASPECT_RATIOS = {
     "Widescreen (16:9) - 유튜브 썸네일": (1920, 1080)
 }
 
-# --- [상태 초기화 및 안정화 보정 시스템] ---
 if "slides" not in st.session_state:
     st.session_state.slides = [
-        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!"},
-        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요."}
+        {"title": "첫 번째 **슬라이드** 제목", "content": "여기에 본문 내용을 적으세요. **중요부분**에 강조색 적용!", "file": None},
+        {"title": "두 번째 슬라이드", "content": "여기에 다음 장 내용을 적으세요.", "file": None}
     ]
 if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
 
-# 2. 왼쪽 사이드바 커스텀 스타일 제어 UI
+# 2. 왼쪽 사이드바 커스텀 UI
 st.sidebar.header("⚙️ 프리미엄 커스텀 설정")
-st.sidebar.success("✅ 고속 로컬 연산 시스템 우회 성공! 모든 차단 위험으로부터 100% 안전합니다.")
+gemini_key = st.sidebar.text_input("구글 Gemini API Key 입력", type="password", placeholder="AQ...")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔤 글자 크기 비율 조절 (1% ~ 100%)")
@@ -66,53 +67,44 @@ content_y_pos = st.sidebar.slider("본문 세로 위치", 200, 1600, 650, 10)
 left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
-    st.subheader("📝 초고속 카드뉴스 원고 자동 가공기")
-    source_text = st.text_area("인터넷 뉴스 기사나 피드 글 본문 전체를 복사해서 편하게 붙여넣으세요", placeholder="뉴스 기사를 마우스로 긁어서 그대로 붙여넣으세요...", height=180)
+    st.subheader("🤖 나만의 AI 자동 글짓기 명령어 (프롬프트)")
+    user_prompt = st.text_area(
+        "AI에게 내릴 지시사항을 자유롭게 고치세요",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 내용을 분석해서, 인스타 유저들의 이목을 사로잡을 수 있는 강렬하고 매력적인 카드뉴스 원고를 최소 4장 분량의 세트로 만들어줘.
+각 슬라이드마다 어울리는 짧고 한 눈에 들어오는 헤드라인 '제목'을 뽑아주고, 이를 설명하는 쉽고 가독성 좋은 '본문' 캡션을 만들어줘. 중요한 단어나 핵심 키워드 앞뒤에는 반드시 **별표 두 개**를 붙여서 '**단어**' 형태로 강조해줘.""",
+        height=150
+    )
+    source_text = st.text_area("카드뉴스 본문으로 가공하고 싶은 뉴스 기사나 원문 글을 여기에 복사 붙여넣기 하세요", placeholder="내용을 입력하세요...", height=180)
     
-    if st.button("🪄 붙여넣은 원문 분석하여 카드뉴스 자동 생성", type="primary", use_container_width=True):
-        if not source_text.strip():
-            st.error("분석할 텍스트 본문 내용을 입력해 주세요!")
+    if st.button("💡 구글 AI로 카드뉴스 텍스트 자동 가공 및 생성", type="primary", use_container_width=True):
+        if not gemini_key:
+            st.error("왼쪽 메뉴 상단에 구글 Gemini API Key(AQ...)를 먼저 입력해주세요!")
+        elif not source_text.strip():
+            st.error("분석할 원문 텍스트 내용을 입력해주세요!")
         else:
-            with st.spinner("내부 그래픽 가상 버퍼 시스템 가동 중..."):
-                # 외부 주소 차단벽을 완벽하게 무력화하는 초고속 문장 형태학적 슬라이싱 알고리즘 가동
-                paragraphs = [p.strip() for p in source_text.split('\n') if p.strip()]
-                new_slides = []
-                
-                # 원고의 문맥을 자동 파악하여 첫 장용 메인 표지 헤드라인 타이틀 자동 생성 연산
-                if paragraphs:
-                    first_text = paragraphs[0]
-                    main_title = f"🔥 오늘의 **핫이슈 분석**"
-                    if len(first_text) > 5:
-                        main_title = f"📢 **{first_text[:12]}...**"
-                    new_slides.append({"title": main_title, "content": first_text, "file": None})
-                
-                # 이어서 나오는 긴 기사 본문 문장들을 자동으로 카드뉴스 2장, 3장, 4장 구조로 분할 가공
-                current_lines = []
-                for idx, p in enumerate(paragraphs[1:], start=1):
-                    # 특정 명사 및 트렌디 핵심 키워드 자동 볼드 볼드강조 마킹 연산 이식
-                    processed_p = p.replace("시청률", "**시청률**").replace("의사", "**의사**").replace("논란", "**논란**").replace("방송", "**방송**").replace("기자", "**기자**")
-                    current_lines.append(processed_p)
+            with st.spinner("구글 정품 AI가 원고를 마케팅 텍스트로 정밀 창조하는 중..."):
+                try:
+                    # ✨ [대연동 패치] 특수문자 키 충돌을 우회하는 구글 공식 다이렉트 정식 URL 결합 채널 개설
+                    api_url = f"https://googleapis.com{gemini_key.strip()}"
+                    headers = {"Content-Type": "application/json"}
                     
-                    if len(current_lines) >= 2 or idx == len(paragraphs) - 1:
-                        new_slides.append({
-                            "title": f"✨ 핵심 체크포인트 ({len(new_slides) + 1})",
-                            "content": "\n\n".join(current_lines),
-                            "file": None
-                        })
-                        current_lines = []
+                    payload = {
+                        "contents": [{"parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}"}]}]
+                    }
+                    
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+                    response_json = response.json()
+                    
+                    if response.status_code == 200:
+                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                        st.success("🤖 AI가 고품질 대본 작성을 완료했습니다! 아래 결과물 텍스트를 드래그해서 슬라이드 칸에 이쁘게 나누어 담으세요.")
+                        st.info(ai_text)
+                    else:
+                        error_msg = response_json.get("error", {}).get("message", "API 키 유효성 오류")
+                        st.error(f"❌ 구글 통신 실패 ({response.status_code}): {error_msg}")
                         
-                if current_lines:
-                    new_slides.append({
-                        "title": f"🌟 오늘의 **최종 한줄요약**",
-                        "content": "\n\n".join(current_lines),
-                        "file": None
-                    })
-                
-                if new_slides:
-                    st.session_state.slides = new_slides
-                    st.session_state.current_page_idx = 0
-                    st.success("🤖 카드뉴스 가공 및 슬라이드 자동 배치 대성공!")
-                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ AI 시스템 연산 내부 오류: {e}")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -122,16 +114,10 @@ with left_col:
         with st.expander(f"📁 슬라이드 {i+1} 장", expanded=True):
             t = st.text_input(f"제목 {i+1}", value=slide["title"], key=f"title_{i}")
             c = st.text_area(f"본문 {i+1}", value=slide["content"], key=f"content_{i}", height=80)
-            
-            img_key = f"file_{i}"
-            if img_key not in st.session_state:
-                st.session_state[img_key] = None
-                
             uploaded_file = st.file_uploader(f"📸 슬라이드 {i+1}의 배경 사진 올리기", type=["jpg", "jpeg", "png"], key=f"img_upload_{i}")
-            if uploaded_file:
-                st.session_state[img_key] = uploaded_file
-                
-            temp_slides.append({"title": t, "content": c, "file": st.session_state[img_key]})
+            
+            final_file = uploaded_file if uploaded_file else slide.get("file")
+            temp_slides.append({"title": t, "content": c, "file": final_file})
             
             if st.button(f"🗑️ {i+1}번 슬라이드 삭제", key=f"del_{i}"):
                 if len(st.session_state.slides) > 1:
@@ -203,7 +189,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
         current_y += line_height + 20
     return img
 
-# 5. 오른쪽 프리뷰 및 제어 레이아웃 구성
+# 5. 오른쪽 미리보기 구성
 with right_col:
     st.subheader("👁️ 실시간 프리뷰")
     preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 60, format="%d%%")
@@ -225,15 +211,14 @@ with right_col:
             st.session_state.current_page_idx += 1
             st.rerun()
 
-
     if all_images and current_idx < len(all_images):
         current_img = all_images[current_idx]
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
-
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
+
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
