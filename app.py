@@ -84,8 +84,11 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    clean_key = gemini_key.strip()
-                    api_url = f"https://googleapis.com{clean_key}"
+                    # 🌟 [오류 완전 종결 패치] 구글 주소는 순수하게 영문으로 완전히 고정!
+                    api_url = "https://googleapis.com"
+                    
+                    # 특수문자가 섞인 회원님의 소중한 키값을 파라미터 백으로 분리하여 안전하게 우회 전송
+                    params = {"key": gemini_key.strip()}
                     headers = {"Content-Type": "application/json"}
                     
                     payload = {
@@ -98,7 +101,8 @@ with left_col:
                         ]
                     }
                     
-                    response = requests.post(api_url, headers=headers, json=payload, timeout=15)
+                    # params 인자를 이용한 분리 수하물 결합 통신 수행
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
                     try:
                         response_json = response.json()
@@ -108,7 +112,7 @@ with left_col:
                             st.info(ai_text)
                         else:
                             error_info = response_json.get("error", {})
-                            st.error(f"❌ 구글 서버 인증 차단 ({response.status_code}): {error_info.get('message', '원인 불명')}")
+                            st.error(f"❌ 구글 서버 인증 실패 ({response.status_code}): {error_info.get('message', '원인 불명')}")
                     except Exception as parse_e:
                         st.error(f"❌ 데이터 내부 연산 실패. (원문 에러 응답: {response.text[:200]})")
                         
@@ -173,26 +177,22 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     wrap_t_width = int(16 * (t_w / 1080))
     wrap_c_width = int(24 * (t_w / 1080))
 
-    # 1. 제목 렌더링
     t_lines = textwrap.wrap(title, width=max(8, wrap_t_width))
     current_y = t_y
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        # 🌟 [오류 해결] 튜플 빼기 오류 방지를 위해 대괄호 인덱스 연산으로 변경 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
 
-    # 2. 본문 렌더링
     c_lines = textwrap.wrap(content, width=max(12, wrap_c_width))
     current_y = c_y
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        # 🌟 [오류 해결] 튜플 빼기 오류 방지를 위해 대괄호 인덱스 연산으로 변경 완료
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -223,6 +223,7 @@ with right_col:
             st.rerun()
 
     if all_images:
+
         current_img = all_images[current_idx]
 
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
