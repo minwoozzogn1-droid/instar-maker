@@ -191,8 +191,8 @@ with right_col:
             st.image(resized_preview, caption=f"실시간 프리뷰 (30% 고정 완료)", use_container_width=False)
             
     st.markdown("---")
-    st.subheader("💾 아카이브 다운로드")
-    if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
+    st.subheader("💾 다운로드")
+    if st.button("🎁 게시물 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for idx, img in enumerate(all_images):
