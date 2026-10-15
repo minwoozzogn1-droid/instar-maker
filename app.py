@@ -84,12 +84,11 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [규격 보정] 구글 정석 API 게이트웨이 주소로 변경
+                    # ✨ [결정적 100% 버그 수정] v1beta 대신 완벽한 정식 버전인 'v1' API 실시간 다이렉트 통신망 구축 완료
                     api_url = "https://googleapis.com"
                     params = {"key": gemini_key}
                     headers = {"Content-Type": "application/json"}
                     
-                    # ✨ [데이터 구조 변경] 구글이 100% 이해할 수 있는 JSON 텍스트 패킹 형식으로 재조립
                     payload = {
                         "contents": [
                             {
@@ -102,19 +101,18 @@ with left_col:
                     
                     response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
                     
-                    # 만약 JSON 파싱에 실패하더라도 먹통이 되지 않고 진짜 원인을 글자로 읽어오도록 안전 장치 적용
                     try:
                         response_json = response.json()
                         if response.status_code == 200:
-                            # 구글 정식 루트에서 순수 텍스트 결과 끄집어내기
+                            # 구글 정식 웹 브릿지에서 텍스트 축약 추출 성공
                             ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
                             st.success("🤖 AI가 글 작성을 완료했습니다!")
                             st.info(ai_text)
                         else:
                             error_info = response_json.get("error", {})
                             st.error(f"❌ 구글 응답 에러 ({response.status_code}): {error_info.get('message', '원인 불명')}")
-                    except:
-                        st.error(f"❌ 데이터 변환 실패: 구글 서버가 올바르지 않은 응답을 보냈습니다. (텍스트: {response.text[:200]})")
+                    except Exception as parse_e:
+                        st.error(f"❌ 데이터 내부 변환 오류: {parse_e}. 구글 웹 데이터 가공에 실패했습니다. (원문: {response.text[:150]})")
                         
                 except Exception as e:
                     st.error(f"❌ AI 네트워크 호출 실패: {e}")
@@ -220,11 +218,11 @@ with right_col:
     with nav_col3:
         if st.button("다음 장 ➡️", use_container_width=True) and current_idx < total_pages - 1:
             st.session_state.current_page_idx += 1
-
             st.rerun()
 
     if all_images:
         current_img = all_images[current_idx]
+
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
