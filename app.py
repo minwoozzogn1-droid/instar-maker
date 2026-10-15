@@ -6,7 +6,7 @@ import re
 import zipfile
 
 # 1. 페이지 레이아웃 및 기본 고정 설정
-st.set_page_config(page_title="나만의 인스타 캐러셀 자동 메이커", layout="wide")
+st.set_page_config(page_title="채밍밍의 캐러셀 자동 메이커", layout="wide")
 st.title("📸 인스타 캐러셀 자동 메이커")
 st.markdown("AI와 대화하며 완성한 대본을 아래 칸에 입력만 하세요! 고품질 인스타 피드 이미지로 자동 전환됩니다.")
 
