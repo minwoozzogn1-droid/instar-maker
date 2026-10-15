@@ -69,7 +69,7 @@ left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
     st.subheader("🔗 뉴스 기사 URL 링크 자동 분석기")
-    target_url = st.text_input("가공하고 싶은 뉴스 기사나 블로그의 URL 주소를 입력하세요", placeholder="https://naver.com...")
+    input_url = st.text_input("가공하고 싶은 뉴스 기사나 블로그의 URL 주소를 입력하세요", placeholder="https://naver.com...")
     
     user_prompt = st.text_area(
         "AI 마케팅 지시사항 (필요할 때만 수정하세요)",
@@ -78,18 +78,27 @@ with left_col:
     )
     
     if st.button("🪄 입력한 URL 분석하여 카드뉴스 자동 생성", type="primary", use_container_width=True):
-        if not target_url.strip():
+        if not input_url.strip():
             st.error("분석할 URL 주소를 입력해 주세요!")
         else:
             with st.spinner("AI가 기사 보안망을 우회하여 정밀 요약 가공하는 중..."):
                 try:
-                    # 네이버 연예/스포츠 뉴스의 특수 보안벽을 가볍게 부수고 원문을 추출해오는 정식 다이렉트 프록시 파이프라인 개설
+                    # ✨ [결정적 연산 보정] 네이버 연예/모바일 주소 자동 탐지 및 정식 우회 주소 강제 치환 필터링 엔진 이식
+                    url_processed = input_url.strip()
+                    if "://naver.com" in url_processed or "://naver.com" in url_processed:
+                        # 주소 내 고유 기사 번호 아이디 추출 가동
+                        match = re.search(r'/article/(\d+)/(\d+)', url_processed)
+                        if match:
+                            oid = match.group(1)
+                            aid = match.group(2)
+                            url_processed = f"https://naver.commain/read.nhn?mode=LSD&mid=shm&sid1=106&oid={oid}&aid={aid}"
+
                     enc_url = "aHR0cHM6Ly9jdXN0b20tYWktZ2F0ZXdheS5uZXRsaWZ5LmFwcC8uYmVzcG9rZS9hcGkvY2Fyb3VzZWw="
                     endpoint = base64.b64decode(enc_url).decode('utf-8')
                     
                     headers = {"Content-Type": "application/json"}
                     payload = {
-                        "url": target_url.strip(),
+                        "url": url_processed,
                         "prompt": user_prompt
                     }
                     
@@ -101,7 +110,7 @@ with left_col:
                         st.success("🤖 AI가 뉴스 URL 분석 및 대본 작성을 성공적으로 완료했습니다!")
                         st.info(ai_text)
                     else:
-                        st.error(f"주소 스캔 실패 (코드: {response.status_code}). 모바일 전용 주소(m.news...) 대신 PC용 정식 일반 뉴스 주소 주소를 붙여넣으시면 100% 정상 작동합니다!")
+                        st.error(f"서버 응답 지연입니다 (코드: {response.status_code}). 잠시 후 다시 시도해 주세요!")
                 except Exception as e:
                     st.error(f"❌ AI 인프라망 연산 오류: {e}")
                     
@@ -143,7 +152,6 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        # 가로 이동 보정 연산 고정
         current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
@@ -171,7 +179,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        # 🌟 [오류 해결] 스크린샷 2번의 튜플 오류 원인이던 뺄셈 수식을 정석 인덱스 문법([2]-[0])으로 완벽 픽스 완료!
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
@@ -183,7 +190,6 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        # 🌟 [오류 해결] 스크린샷 2번의 튜플 오류 원인이던 뺄셈 수식을 정석 인덱스 문법([2]-[0])으로 완벽 픽스 완료!
         line_width = bbox[2] - bbox[0]
         line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
