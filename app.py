@@ -8,7 +8,7 @@ import zipfile
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 인스타 캐러셀 자동 메이커", layout="wide")
 st.title("📸 인스타 캐러셀 자동 메이커")
-st.markdown("저와 대화하며 완성한 대본을 아래 칸에 입력만 하세요! 고품질 인스타 피드 이미지로 자동 전환됩니다.")
+st.markdown("AI와 대화하며 완성한 대본을 아래 칸에 입력만 하세요! 고품질 인스타 피드 이미지로 자동 전환됩니다.")
 
 FONT_PATH = "malgunbd.ttf"
 
@@ -36,7 +36,6 @@ if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
 
 # 2. 왼쪽 사이드바 커스텀 스타일 제어 UI (규격 및 배치 제거 완료)
-st.sidebar.markdown("---")
 st.sidebar.subheader("🔤 글자 크기 비율 조절")
 title_percent = st.sidebar.slider("📐 제목 글자 크기 비율", 1, 100, 65, format="%d%%")
 content_percent = st.sidebar.slider("📐 본문 글자 크기 비율", 1, 100, 35, format="%d%%")
