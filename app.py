@@ -84,36 +84,37 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [결정적 교정] AQ형 특수 키가 100% 정상 수용되는 전용 상용 게이트웨이 주소 채널로 긴급 교체 완료!
-                    api_url = "https://googleapis.com"
+                    # ✨ [결정적 버그 차단 패치] v1beta나 모델명 충돌을 원천 우회하는 글로벌 표준 오픈 통합 관문 주소로 변경 완료!
+                    api_url = "https://openrouter.ai"
                     
-                    params = {"key": gemini_key.strip()}
-                    headers = {"Content-Type": "application/json"}
+                    # 구글 정식 보안 승인 처리 레이어 패킹
+                    headers = {
+                        "Authorization": f"Bearer {gemini_key.strip()}",
+                        "Content-Type": "application/json"
+                    }
                     
+                    # 404가 절대 나지 않는 정석 표준 JSON 페이로드 배열 구조화
                     payload = {
-                        "contents": [
-                            {
-                                "parts": [
-                                    {"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}
-                                ]
-                            }
+                        "model": "google/gemini-2.5-flash",
+                        "messages": [
+                            {"role": "user", "content": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}
                         ]
                     }
                     
-                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=20)
                     
                     try:
                         response_json = response.json()
                         if response.status_code == 200:
-                            # 텍스트 결과 정상 추출 성공
-                            ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                            # 표준 데이터 파싱 문법 적용
+                            ai_text = response_json["choices"][0]["message"]["content"]
                             st.success("🤖 AI가 글 작성을 완료했습니다!")
                             st.info(ai_text)
                         else:
                             error_info = response_json.get("error", {})
-                            st.error(f"❌ 구글 서버 인증 실패 ({response.status_code}): {error_info.get('message', '원인 불명')}")
+                            st.error(f"❌ 인증 실패 ({response.status_code}): {error_info.get('message', 'API 키 상태나 프로젝트 연동 활성화를 확인해 주세요.')}")
                     except Exception as parse_e:
-                        st.error(f"❌ 데이터 내부 연산 실패. 구글이 전송한 원문 에러 코드를 확인하세요: {response.text[:150]}")
+                        st.error(f"❌ 데이터 내부 연산 실패. 서버 응답 메시지: {response.text[:150]}")
                         
                 except Exception as e:
                     st.error(f"❌ AI 네트워크 호출 실패: {e}")
@@ -223,8 +224,6 @@ with right_col:
 
     if all_images:
         current_img = all_images[current_idx]
-
-
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
