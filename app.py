@@ -36,9 +36,6 @@ if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
 
 # 2. 왼쪽 사이드바 커스텀 스타일 제어 UI (규격 및 배치 제거 완료)
-st.sidebar.header("⚙️ 캐러셀 디자인 커스텀")
-st.sidebar.success("✅ 오류 원인 전면 제거 완료! 무제한으로 초고속 구동됩니다.")
-
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔤 글자 크기 비율 조절")
 title_percent = st.sidebar.slider("📐 제목 글자 크기 비율", 1, 100, 65, format="%d%%")
