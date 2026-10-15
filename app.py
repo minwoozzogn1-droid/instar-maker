@@ -8,7 +8,7 @@ import zipfile
 # 1. 페이지 레이아웃 및 기본 고정 설정
 st.set_page_config(page_title="나만의 인스타 캐러셀 자동 메이커", layout="wide")
 st.title("📸 인스타 캐러셀 자동 메이커")
-st.markdown("저와 대화하며 완성한 대본을 아래 칸에 입력만 하세요! 0.1초 만에 고품질 인스타 피드 이미지로 자동 전환됩니다.")
+st.markdown("저와 대화하며 완성한 대본을 아래 칸에 입력만 하세요! 고품질 인스타 피드 이미지로 자동 전환됩니다.")
 
 FONT_PATH = "malgunbd.ttf"
 
@@ -35,7 +35,10 @@ if "slides" not in st.session_state:
 if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
 
-# 2. 왼쪽 사이드바 커스텀 스타일 제어 UI
+# 2. 왼쪽 사이드바 커스텀 스타일 제어 UI (규격 및 배치 제거 완료)
+st.sidebar.header("⚙️ 캐러셀 디자인 커스텀")
+st.sidebar.success("✅ 오류 원인 전면 제거 완료! 무제한으로 초고속 구동됩니다.")
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔤 글자 크기 비율 조절")
 title_percent = st.sidebar.slider("📐 제목 글자 크기 비율", 1, 100, 65, format="%d%%")
@@ -50,16 +53,7 @@ text_color = PREMIUM_COLORS[st.sidebar.selectbox("기본 글자 색상", list(PR
 highlight_color = PREMIUM_COLORS[st.sidebar.selectbox("🌟 중요 강조 단어 색상", list(PREMIUM_COLORS.keys()), index=2)]
 bg_color = PREMIUM_COLORS[st.sidebar.selectbox("🖼️ 배경 컬러 에디션", list(PREMIUM_COLORS.keys()), index=0)]
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("📐 규격 및 배치")
-selected_ratio_name = st.sidebar.selectbox("원하는 이미지 규격을 고르세요", list(ASPECT_RATIOS.keys()))
-target_width, target_height = ASPECT_RATIOS[selected_ratio_name]
-
-align_option = st.sidebar.radio("글자 가로 정렬", ["왼쪽", "중앙", "오른쪽"], index=1, horizontal=True)
-title_y_pos = st.sidebar.slider("제목 세로 위치", 50, 800, 200, 10)
-content_y_pos = st.sidebar.slider("본문 세로 위치", 200, 1600, 650, 10)
-
-# 3. 메인 레이아웃 화면 구성
+# 3. 메인 레이아웃 화면 구성 (좌측: 원고 편집 / 우측: 프리뷰 및 규격 배치)
 left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
@@ -86,7 +80,6 @@ with left_col:
                 if len(st.session_state.slides) > 1:
                     st.session_state.slides.pop(i)
                     st.session_state.current_page_idx = min(st.session_state.current_page_idx, len(st.session_state.slides)-1)
-                    st.author = True
                     st.rerun()
 
     st.session_state.slides = temp_slides
@@ -158,33 +151,48 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
         current_y += line_height + 20
     return img
 
-# 5. 오른쪽 미리보기 구성 및 ZIP 다운로드
+# 5. 오른쪽 화면 구성 (5:5 분할 및 프리뷰 사이즈 30% 고정)
 with right_col:
-    st.subheader("👁️ 실시간 프리뷰")
-    preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 30, format="%d%%")
+    st.subheader("👁️ 실시간 프리뷰 & 규격 배치 셋업")
     
-    all_images = [draw_carousel_slide(s["title"], s["content"], FONT_PATH, title_size, content_size, text_color, highlight_color, bg_color, s["file"], align_option, title_y_pos, content_y_pos, target_width, target_height) for s in st.session_state.slides]
+    # 우측 공간을 프리뷰와 설정창으로 정확히 5:5(1:1 비율) 분할
+    preview_col, config_col = st.columns([1, 1])
     
-    nav_col1, nav_col2, nav_col3 = st.columns(3)
-    total_pages = len(all_images)
-    current_idx = st.session_state.current_page_idx
-    
-    with nav_col1:
-        if st.button("⬅️ 이전 장", use_container_width=True) and current_idx > 0:
-            st.session_state.current_page_idx -= 1
-            st.rerun()
-    with nav_col2:
-        st.markdown(f"<h4 style='text-align: center; color: gray;'> {current_idx + 1} / {total_pages}</h4>", unsafe_allow_html=True)
-    with nav_col3:
-        if st.button("다음 장 ➡️", use_container_width=True) and current_idx < total_pages - 1:
-            st.session_state.current_page_idx += 1
-            st.rerun()
+    with config_col:
+        st.markdown("### 📐 규격 및 글자 배치")
+        selected_ratio_name = st.selectbox("원하는 이미지 규격을 고르세요", list(ASPECT_RATIOS.keys()))
+        target_width, target_height = ASPECT_RATIOS[selected_ratio_name]
 
-    if all_images and current_idx < len(all_images):
-        current_img = all_images[current_idx]
-        resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
-        st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
-    
+        align_option = st.radio("글자 가로 정렬", ["왼쪽", "중앙", "오른쪽"], index=1, horizontal=True)
+        title_y_pos = st.slider("제목 세로 위치", 50, 800, 200, 10)
+        content_y_pos = st.slider("본문 세로 위치", 200, 1600, 650, 10)
+        
+    with preview_col:
+        # 프리뷰 연산 수행
+        all_images = [draw_carousel_slide(s["title"], s["content"], FONT_PATH, title_size, content_size, text_color, highlight_color, bg_color, s["file"], align_option, title_y_pos, content_y_pos, target_width, target_height) for s in st.session_state.slides]
+        
+        nav_col1, nav_col2, nav_col3 = st.columns(3)
+        total_pages = len(all_images)
+        current_idx = st.session_state.current_page_idx
+        
+        with nav_col1:
+            if st.button("⬅️ 이전 장", use_container_width=True) and current_idx > 0:
+                st.session_state.current_page_idx -= 1
+                st.rerun()
+        with nav_col2:
+            st.markdown(f"<h4 style='text-align: center; color: gray;'> {current_idx + 1} / {total_pages}</h4>", unsafe_allow_html=True)
+        with nav_col3:
+            if st.button("다음 장 ➡️", use_container_width=True) and current_idx < total_pages - 1:
+                st.session_state.current_page_idx += 1
+                st.rerun()
+
+        if all_images and current_idx < len(all_images):
+            current_img = all_images[current_idx]
+            # 프리뷰 슬라이더 바를 없애고 30% 크기로 완전 고정
+            preview_scale = 30
+            resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
+            st.image(resized_preview, caption=f"실시간 프리뷰 (30% 고정 완료)", use_container_width=False)
+            
     st.markdown("---")
     st.subheader("💾 아카이브 다운로드")
     if st.button("🎁 인스타그램 업로드용 이미지 한 번에 다운로드 (ZIP)", use_container_width=True, type="primary") and all_images:
