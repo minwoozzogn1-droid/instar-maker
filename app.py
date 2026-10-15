@@ -36,6 +36,7 @@ if "current_page_idx" not in st.session_state:
     st.session_state.current_page_idx = 0
 
 # 2. 왼쪽 사이드바 커스텀 스타일 제어 UI (규격 및 배치 제거 완료)
+st.sidebar.markdown("---")
 st.sidebar.subheader("🔤 글자 크기 비율 조절")
 title_percent = st.sidebar.slider("📐 제목 글자 크기 비율", 1, 100, 65, format="%d%%")
 content_percent = st.sidebar.slider("📐 본문 글자 크기 비율", 1, 100, 35, format="%d%%")
@@ -54,7 +55,7 @@ left_col, right_col = st.columns([1, 1.2])
 
 with left_col:
     st.subheader("📝 카드뉴스 원고 편집 폼")
-    st.info("💡 아래 각 슬라이드 상자를 열어 제목과 본문을 입력하고, 필요한 경우 배경 사진을 업로드하세요.")
+    st.info("💡제목과 본문을 입력하고, 필요한 경우 배경 사진을 업로드하세요.")
     
     temp_slides = []
     for i, slide in enumerate(st.session_state.slides):
