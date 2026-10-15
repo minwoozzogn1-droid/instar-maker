@@ -69,7 +69,7 @@ with left_col:
     st.subheader("🤖 나만의 AI 자동 글짓기 명령어 (프롬프트)")
     user_prompt = st.text_area(
         "AI에게 내릴 지시사항을 자유롭게 고치세요",
-        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 내용을 분석해서, 인스타 유저들의 이목을 사로잡을 수 있는 강렬하고 매력적인 카드뉴스 원고를 최소 4장 분량의 세트로 만들어줘. 각 슬라이드마다 어울리는 짧고 한 눈에 들어오는 헤드라인 '제목'을 뽑아주고, 이를 설명하는 쉽고 가독성 좋은 '본문' 캡션을 만들어줘. 중요한 단어 앞뒤에는 **별표 두 개**를 붙여서 '**단어**' 형태로 강조해줘.""",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글의 내용을 분석해서, 인스타 유저들의 이목을 사로잡을 수 있는 강렬하고 매력적인 카드뉴스 원고를 최소 4장 분량의 세트로 만들어줘. 각 슬라이드마다 어울리는 짧고 한 눈에 들어오는 헤드라인 '제목'을 뽑아주고, 이를 설명하는 쉽고 가독성 좋은 '본문' 캡션을 만들어줘. 중요한 단어 앞뒤에는 반드시 **별표 두 개**를 붙여서 '**단어**' 형태로 강조해줘.""",
         height=150
     )
     source_text = st.text_area("카드뉴스 본문으로 가공하고 싶은 뉴스 기사나 원문 글을 여기에 복사 붙여넣기 하세요", placeholder="내용을 입력하세요...", height=180)
@@ -82,12 +82,11 @@ with left_col:
         else:
             with st.spinner("구글 정품 AI가 공식 보안망을 통과하여 대본을 빌드하는 중..."):
                 try:
-                    # ✨ [강제 우회 패치] 옛날 v1beta 주소 체계와의 간섭을 물리적으로 완전히 단절
-                    # 라이브러리가 최신 버전(v1 주소 체계)만 강제로 사용하도록 버전을 직접 지정하여 연동 초기화
-                    genai.configure(api_key=gemini_key.strip(), client_options={"api_version": "v1"})
+                    # ✨ [옵션 완전 제거 패치] 충돌을 유도하던 client_options를 완벽히 걷어내고 순수 키인증만 수행
+                    genai.configure(api_key=gemini_key.strip())
                     
-                    # 404 모델 에러가 일절 나지 않는 정식 상용화 모델 빌드
-                    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+                    # 구글 표준 모델 인터페이스 호출
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text.strip()}")
                     
@@ -138,7 +137,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox[2] - bbox[0])
+        current_x += (bbox - bbox)
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -165,8 +164,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -176,8 +175,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
@@ -217,10 +216,10 @@ with right_col:
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for idx, img in enumerate(all_images):
                 img_buffer = BytesIO()
-
                 img.save(img_buffer, format="JPEG")
                 zip_file.writestr(f"{idx + 1}.jpg", img_buffer.getvalue())
         
+
         st.download_button(
             label="📥 ZIP 압축파일 다운로드 받기",
             data=zip_buffer.getvalue(),
