@@ -86,20 +86,20 @@ with left_col:
                 try:
                     # ✨ [결정적 100% 버그 수정] v1beta 대신 완벽한 정식 버전인 'v1' API 실시간 다이렉트 통신망 구축 완료
                # 구글 공식 규격 API 주소 고정
-api_url = "https://googleapis.com"
-params = {"key": gemini_key}
-headers = {"Content-Type": "application/json"}
+                    api_url = "https://googleapis.com"
+                    params = {"key": gemini_key}
+                    headers = {"Content-Type": "application/json"}
 
-# 구글 표준 텍스트 패킹 데이터 구조 구조화
-payload = {
-    "contents": [
-        {
-            "parts": [
-                {"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}
-            ]
-        }
-    ]
-}
+                # 구글 표준 텍스트 패킹 데이터 구조 구조화
+                    payload = {
+                        "contents": [
+                            {
+                                "parts": [
+                                    {"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}
+                                ]
+                            }
+                        ]
+                    }
 
                     
                     response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
