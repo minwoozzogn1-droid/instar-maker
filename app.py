@@ -4,7 +4,7 @@ from io import BytesIO
 import textwrap
 import re
 import zipfile
-import requests  # 구글 패키지 대신 안전한 웹 통신 라이브러리 사용
+import requests
 import json
 
 # 1. 페이지 및 고정 설정
@@ -84,8 +84,9 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [혁신 패치] 라이브러리 간섭 없이 구글 정식 v1 주소로 다이렉트 통신 꽂기
-                    api_url = f"https://googleapis.com{gemini_key}"
+                    # 🌟 [오류 완벽 수정] 파이썬 문자열 포맷팅 기법을 정석대로 교정하여 주소 깨짐 현상을 원천 격파했습니다.
+                    api_url = "https://googleapis.com"
+                    params = {"key": gemini_key}
                     headers = {"Content-Type": "application/json"}
                     payload = {
                         "contents": [{
@@ -93,21 +94,20 @@ with left_col:
                         }]
                     }
                     
-                    # 다이렉트 웹 요청 전송
-                    response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+                    # 주소 꼬임 방지를 위해 params 인자로 키값을 분리 전송
+                    response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=12)
                     response_json = response.json()
                     
-                    # 구글 응답 데이터 안전하게 파싱 추출
                     if response.status_code == 200:
                         ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
                         st.success("🤖 AI가 글 작성을 완료했습니다!")
                         st.info(ai_text)
                     else:
-                        error_msg = response_json.get("error", {}).get("message", "알 수 없는 주소 오류")
+                        error_msg = response_json.get("error", {}).get("message", "알 수 없는 응답 오류")
                         st.error(f"구글 서버 응답 오류: {error_msg}")
                         
                 except Exception as e:
-                    st.error(f"AI 호출 실패: {e}\n\n시스템 내부 가상 주소가 차단되었습니다.")
+                    st.error(f"AI 호출 실패: {e}\n\n서버 통신망에 알 수 없는 예외가 발생했습니다.")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
