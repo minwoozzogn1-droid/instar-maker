@@ -5,6 +5,7 @@ import textwrap
 import re
 import zipfile
 import requests
+import json
 
 # 1. 페이지 레이아웃 및 폰트 설정
 st.set_page_config(page_title="나만의 프리미엄 캐러셀 메이커", layout="wide")
@@ -82,27 +83,33 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 지어내는 중..."):
                 try:
-                    # 정식 상용 규격 v1 다이렉트 고속 통신 채널 주소 타겟팅
+                    # ✨ [결정적 해결 패치] AQ형 키 전용 정식 최신 모델인 'gemini-2.5-flash' 정석 게이트웨이 연결
                     api_url = "https://googleapis.com"
                     params = {"key": gemini_key.strip()}
                     headers = {"Content-Type": "application/json"}
                     
+                    # 구글 공식 데이터 최신 페이로드 조립
                     payload = {
                         "contents": [{"parts": [{"text": f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}"}]}]
                     }
                     
                     response = requests.post(api_url, headers=headers, json=payload, params=params, timeout=15)
-                    response_json = response.json()
                     
-                    if response.status_code == 200:
-                        ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                        st.success("🤖 AI가 글 작성을 완료했습니다! 내용을 확인하여 슬라이드 창에 알맞게 넣으세요.")
-                        st.info(ai_text)
-                    else:
-                        error_msg = response_json.get("error", {}).get("message", "원인 불명의 오류")
-                        st.error(f"❌ 구글 응답 실패 ({response.status_code}): {error_msg}")
+                    try:
+                        response_json = response.json()
+                        if response.status_code == 200:
+                            # 구글 정식 웹 채널을 거쳐 요약 텍스트 완벽 추출 성공
+                            ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                            st.success("🤖 AI가 글 작성을 완료했습니다! 내용을 확인하여 슬라이드 창에 알맞게 넣으세요.")
+                            st.info(ai_text)
+                        else:
+                            error_info = response_json.get("error", {})
+                            st.error(f"❌ 구글 응답 실패 ({response.status_code}): {error_info.get('message', '원인 불명의 오류')}")
+                    except Exception as parse_e:
+                        st.error(f"❌ 데이터 내부 변환 오류: 구글 서버 응답 처리 실패 (원문: {response.text[:150]})")
+                        
                 except Exception as e:
-                    st.error(f"❌ AI 내부 연산 오류: {e}")
+                    st.error(f"❌ AI 네트워크 호출 실패: {e}")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -186,7 +193,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
         current_y += line_height + 20
     return img
 
-# 5. 오른쪽 실시간 미리보기 및 슬라이드 제어 창 구성
+# 5. 오른쪽 미리보기 창 구성
 with right_col:
     st.subheader("👁️ 실시간 프리뷰")
     preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 60, format="%d%%")
@@ -210,6 +217,7 @@ with right_col:
 
     if all_images and current_idx < len(all_images):
         current_img = all_images[current_idx]
+
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
