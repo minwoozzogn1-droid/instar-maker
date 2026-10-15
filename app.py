@@ -83,17 +83,13 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [결정적 해결책] 구글 최신 패키지 가이드에 맞춰 라이브러리 초기화 진행
                     genai.configure(api_key=gemini_key)
-                    
-                    # 옛날 v1beta 주소 체계와의 간섭을 완전히 끊어내기 위해 구글 공식 정식 규격 명칭 강제 적용
-                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
-                    
+                    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
                     response = model.generate_content(f"{user_prompt}\n\n[원본 글 내용]:\n{source_text}")
                     st.success("🤖 AI가 글 작성을 완료했습니다!")
                     st.info(response.text)
                 except Exception as e:
-                    st.error(f"AI 호출 실패: {e}\n\n구글 라이브러리가 꼬여 발생한 일시적 오류일 수 있습니다. 인터넷 배포(GitHub 업로드)를 통해 서버 환경을 클라우드로 변경하면 이 현상이 깨끗하게 해결됩니다.")
+                    st.error(f"AI 호출 실패: {e}")
                     
     st.markdown("---")
     st.subheader("📝 슬라이드 내용 편집 및 사진 매칭")
@@ -131,7 +127,8 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox - bbox)
+        # 클라우드 튜플 규격 보정 완료
+        current_x += (bbox[2] - bbox[0])
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -158,7 +155,9 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width, line_height = bbox - bbox, bbox - bbox
+        # 🌟 클라우드 최신 Pillow 환경에 맞춰 대괄호 인덱스 연산으로 완벽 수정 완료
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -168,7 +167,9 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width, line_height = bbox - bbox, bbox - bbox
+        # 🌟 클라우드 최신 Pillow 환경에 맞춰 대괄호 인덱스 연산으로 완벽 수정 완료
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
