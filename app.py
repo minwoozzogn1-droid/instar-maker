@@ -161,7 +161,7 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
 # 5. 오른쪽 미리보기 구성 및 ZIP 다운로드
 with right_col:
     st.subheader("👁️ 실시간 프리뷰")
-    preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 60, format="%d%%")
+    preview_scale = st.slider("🔍 미리보기 화면 크기 조절", 30, 100, 30, format="%d%%")
     
     all_images = [draw_carousel_slide(s["title"], s["content"], FONT_PATH, title_size, content_size, text_color, highlight_color, bg_color, s["file"], align_option, title_y_pos, content_y_pos, target_width, target_height) for s in st.session_state.slides]
     
