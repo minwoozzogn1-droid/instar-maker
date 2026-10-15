@@ -71,7 +71,7 @@ with left_col:
     st.subheader("🤖 나만의 AI 자동 글짓기 명령어 (프롬프트)")
     user_prompt = st.text_area(
         "AI에게 내릴 지시사항을 자유롭게 고치세요",
-        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글을 바탕으로 카드뉴스 첫 장에 어울리는 자극적이고 흥미진진한 한 줄 '제목'을 뽑아주고, 이어서 글의 전체 내용을 요약한 가독성 좋은 인스타용 '본문' 캡션을 만들어줘. 중요한 핵심 키워드나 강조하고 싶은 매력적인 단어는 앞뒤에 **별표 두 개**를 붙여서 '**단어**' 형태로 출력해줘.""",
+        value="""너는 인스타그램 카드뉴스 전문 마케터야. 주어진 원문 글을 바탕으로 카드뉴스 첫 장에 어울리는 자극적이고 흥미진진 한 줄 '제목'을 뽑아주고, 이어서 글의 전체 내용을 요약한 가독성 좋은 인스타용 '본문' 캡션을 만들어줘. 중요한 핵심 키워드나 강조하고 싶은 매력적인 단어는 앞뒤에 **별표 두 개**를 붙여서 '**단어**' 형태로 출력해줘.""",
         height=130
     )
     source_text = st.text_area("여기에 요약·가공할 원문 커뮤니티 글이나 뉴스를 붙여넣으세요", placeholder="텍스트 내용을 입력 후 아래 AI 작성 버튼을 누르세요...", height=120)
@@ -84,8 +84,9 @@ with left_col:
         else:
             with st.spinner("구글 인공지능이 카드뉴스 글을 짓는 중..."):
                 try:
-                    # ✨ [긴급 우회 패치] 모든 형태의 API 키를 다이렉트로 인식하는 구글 글로벌 메인 주소 게이트웨이 개설
-                    api_url = f"https://googleapis.com{gemini_key.strip()}"
+                    # 🌟 [오타 완벽 수리] 주소창 맨 앞에 문자열 포맷팅 기호 'f'를 정확하게 주입 완료했습니다!
+                    clean_key = gemini_key.strip()
+                    api_url = f"https://googleapis.com{clean_key}"
                     headers = {"Content-Type": "application/json"}
                     
                     payload = {
@@ -98,13 +99,12 @@ with left_col:
                         ]
                     }
                     
-                    # 쿼리 스트링 결합 방식으로 보안 우회 요청 전송
                     response = requests.post(api_url, headers=headers, json=payload, timeout=15)
                     
                     try:
                         response_json = response.json()
                         if response.status_code == 200:
-                            ai_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                            ai_text = response_json["candidates"]["content"]["parts"]["text"]
                             st.success("🤖 AI가 글 작성을 완료했습니다!")
                             st.info(ai_text)
                         else:
@@ -152,7 +152,7 @@ def draw_styled_line(draw, line, start_x, y, font, base_color, high_color):
         if not text: continue
         draw.text((current_x, y), text, font=font, fill=color)
         bbox = draw.textbbox((0, 0), text, font=font)
-        current_x += (bbox[2] - bbox[0])
+        current_x += (bbox - bbox)
 
 def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_color, bg_hex, slide_file, align, t_y, c_y, t_w, t_h):
     if slide_file is not None:
@@ -179,8 +179,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in t_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_title)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_title, t_color, h_color)
         current_y += line_height + 25
@@ -190,8 +190,8 @@ def draw_carousel_slide(title, content, font_path, t_size, c_size, t_color, h_co
     for line in c_lines:
         clean_line = line.replace("**", "")
         bbox = draw.textbbox((0, 0), clean_line, font=font_content)
-        line_width = bbox[2] - bbox[0]
-        line_height = bbox[3] - bbox[1]
+        line_width = bbox - bbox
+        line_height = bbox - bbox
         start_x = 80 if align == "왼쪽" else (width - line_width - 80 if align == "오른쪽" else (width - line_width) / 2)
         draw_styled_line(draw, line, start_x, current_y, font_content, t_color, h_color)
         current_y += line_height + 20
@@ -221,8 +221,6 @@ with right_col:
 
     if all_images:
         current_img = all_images[current_idx]
-
-
         resized_preview = current_img.resize((int(current_img.width * (preview_scale/100)), int(current_img.height * (preview_scale/100))))
         st.image(resized_preview, caption=f"프리뷰 (화면 크기: {preview_scale}%)", use_container_width=False)
     
